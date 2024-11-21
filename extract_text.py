@@ -38,37 +38,54 @@ def extract_text_from_docx(file_path):
 # 保存提取的纯文本内容
 def save_to_file(text, output_dir, filename):
     os.makedirs(output_dir, exist_ok=True)
-    with open(os.path.join(output_dir, filename), "w", encoding="utf-8") as f:
+    output_path = os.path.join(output_dir, filename)
+    with open(output_path, "w", encoding="utf-8") as f:
         f.write(text)
 
 # 提取并保存DOCX中的文本
 def extract_and_save(input_path, output_dir):
-    file_count = 0
+    docx_files = []
     
-    # 处理单个文件的情况
+    # 收集需要处理的文件
     if os.path.isfile(input_path):
         if not input_path.endswith('.docx'):
             print(f"错误：'{input_path}' 不是DOCX文件")
             return
-        text = extract_text_from_docx(input_path)
-        output_filename = f"{os.path.splitext(os.path.basename(input_path))[0]}.txt"
-        save_to_file(text, output_dir, output_filename)
-        file_count = 1
-    
-    # 处理目录的情况
+        docx_files.append(input_path)
     elif os.path.isdir(input_path):
-        for filename in os.listdir(input_path):
-            if filename.endswith(".docx"):
-                file_count += 1
-                file_path = os.path.join(input_path, filename)
-                text = extract_text_from_docx(file_path)
-                output_filename = f"{os.path.splitext(filename)[0]}.txt"
-                save_to_file(text, output_dir, output_filename)
+        docx_files.extend([
+            os.path.join(input_path, f) 
+            for f in os.listdir(input_path) 
+            if f.endswith('.docx')
+        ])
     else:
         print(f"错误：'{input_path}' 不存在")
         return
+    
+    total_files = len(docx_files)
+    if total_files == 0:
+        print("未找到任何DOCX文件")
+        return
         
-    print(f"提取完成，共处理 {file_count} 个文件。")
+    print(f"\n共发现 {total_files} 个DOCX文件待处理")
+    print("=" * 50)
+    
+    # 处理文件
+    for index, file_path in enumerate(docx_files, 1):
+        filename = os.path.basename(file_path)
+        print(f"\n正在处理第 {index}/{total_files} 个文件: {filename}")
+        
+        try:
+            text = extract_text_from_docx(file_path)
+            output_filename = f"{os.path.splitext(filename)[0]}.txt"
+            save_to_file(text, output_dir, output_filename)
+            print(f"✓ 已完成提取并保存到: {os.path.join(output_dir, output_filename)}")
+            
+        except Exception as e:
+            print(f"✗ 处理文件 '{filename}' 时出错: {str(e)}")
+    
+    print("\n" + "=" * 50)
+    print(f"处理完成！成功提取 {total_files} 个文件的内容到目录: {output_dir}")
 
 def main():
     # 创建命令行参数解析器

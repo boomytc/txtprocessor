@@ -1,0 +1,5 @@
+# 忽略 output 目录中的所有内容
+/output/*
+
+# 但保留 output 目录本身（通过保留一个空的 .gitkeep 文件）
+!/output/.gitkeep
