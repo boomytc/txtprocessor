@@ -317,19 +317,23 @@ def process_text_iteratively(text: str, llm_processor: LLMProcessor, output_dir:
         print(f"\n处理文本时出错: {str(e)}")
         return False
 
-def process_file(input_path: str, output_dir: str, llm_processor: LLMProcessor) -> bool:
-    """处理单个文件"""
+def process_file(input_path: str, output_dir: str, llm_processor: LLMProcessor) -> Tuple[bool, float]:
+    """处理单个文件
+    Returns:
+        Tuple[bool, float]: (是否成功, 处理耗时(秒))
+    """
+    start_time = time.time()
     try:
         # 检查是否已处理
         if is_file_processed(input_path, output_dir):
-            return True
+            return True, 0
         
         # 读取文件
         with open(input_path, 'r', encoding='utf-8') as f:
             text = f.read().strip()
         
         if not text:
-            return False
+            return False, 0
         
         # 创建输出目录
         os.makedirs(output_dir, exist_ok=True)
@@ -344,7 +348,9 @@ def process_file(input_path: str, output_dir: str, llm_processor: LLMProcessor) 
         if success:
             # 创建处理完成标记
             create_done_marker(input_path, output_dir)
+            elapsed_time = time.time() - start_time
             print(f"✓ 成功处理：{os.path.basename(input_path)}")
+            print(f"处理耗时：{elapsed_time:.2f}秒")
             
             # 打印最终文件列表
             final_files = [f for f in os.listdir(output_dir) if f.endswith('.txt') and f != '0.txt']
@@ -355,15 +361,17 @@ def process_file(input_path: str, output_dir: str, llm_processor: LLMProcessor) 
                     content = file.read().strip()
                 print(f"  - {f}: {content[:50]}...")
         
-        return success
+        return success, time.time() - start_time
         
     except Exception as e:
         print(f"\n✗ 处理文件时出错: {str(e)}")
-        return False
+        return False, time.time() - start_time
 
 def process_directory(input_dir: str, output_dir: str):
     """处理整个目录"""
+    total_start_time = time.time()
     print(f"\n=== 文本处理工具 ===")
+    print(f"开始时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     # 初始化LLM处理器
     llm_processor = LLMProcessor()
@@ -399,6 +407,7 @@ def process_directory(input_dir: str, output_dir: str):
     # 处理文件
     success_count = 0
     processed_files = 0
+    file_times = []  # 记录每个文件的处理时间
     
     for input_path in txt_files:
         # 创建对应的输出目录
@@ -407,18 +416,30 @@ def process_directory(input_dir: str, output_dir: str):
         os.makedirs(os.path.dirname(output_subdir), exist_ok=True)
         
         # 处理文件
-        if process_file(input_path, output_subdir, llm_processor):
+        success, elapsed_time = process_file(input_path, output_subdir, llm_processor)
+        if success:
             success_count += 1
+            file_times.append((os.path.basename(input_path), elapsed_time))
             
             # 统计生成的文件数量
             if os.path.exists(output_subdir):
                 files = [f for f in os.listdir(output_subdir) if f.endswith('.txt') and f != '0.txt']
                 processed_files += len(files)
     
+    total_time = time.time() - total_start_time
+    
     print("\n处理完成:")
+    print(f"结束时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"总耗时：{total_time:.2f}秒")
     print(f"成功处理: {success_count}/{len(txt_files)} 个文件")
     print(f"生成文件: {processed_files} 个")
     print(f"输出目录: {os.path.abspath(output_dir)}")
+    
+    # 打印每个文件的处理时间
+    if file_times:
+        print("\n各文件处理耗时:")
+        for filename, t in file_times:
+            print(f"  - {filename}: {t:.2f}秒")
 
 def main():
     parser = argparse.ArgumentParser(description='使用LLM和jieba进行文本分句')
