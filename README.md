@@ -94,6 +94,3 @@ pip install python-docx requests tqdm
 4. 所有脚本都会创建必要的输出目录
 
 5. 每个处理阶段都会生成处理报告，方便追踪和调试
-```
-
-
